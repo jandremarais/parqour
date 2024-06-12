@@ -1,9 +1,12 @@
-use std::path::PathBuf;
+use std::{panic, path::PathBuf};
 
+use color_eyre::eyre;
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
+
+use crate::tui;
 
 lazy_static! {
     pub static ref PROJECT_NAME: String = env!("CARGO_CRATE_NAME").to_uppercase().to_string();
@@ -94,4 +97,26 @@ macro_rules! trace_dbg {
     ($ex:expr) => {
         trace_dbg!(level: tracing::Level::DEBUG, $ex)
     };
+}
+
+pub fn install_hooks() -> color_eyre::Result<()> {
+    // add any extra configuration you need to the hook builder
+    let hook_builder = color_eyre::config::HookBuilder::default();
+    let (panic_hook, eyre_hook) = hook_builder.into_hooks();
+
+    // convert from a color_eyre PanicHook to a standard panic hook
+    let panic_hook = panic_hook.into_panic_hook();
+    panic::set_hook(Box::new(move |panic_info| {
+        tui::Tui::restore().unwrap();
+        panic_hook(panic_info);
+    }));
+
+    // convert from a color_eyre EyreHook to a eyre ErrorHook
+    let eyre_hook = eyre_hook.into_eyre_hook();
+    eyre::set_hook(Box::new(move |error| {
+        tui::Tui::restore().unwrap();
+        eyre_hook(error)
+    }))?;
+
+    Ok(())
 }
