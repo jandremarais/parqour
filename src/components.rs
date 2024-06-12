@@ -63,13 +63,18 @@ pub trait Component {
     /// # Returns
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
-    fn handle_events(&mut self, event: Option<Event>) -> Result<Option<Action>> {
+    fn handle_events(&mut self, event: Option<Event>) -> Result<()> {
         let r = match event {
             Some(Event::Key(key_event)) => self.handle_key_events(key_event)?,
             Some(Event::Mouse(mouse_event)) => self.handle_mouse_events(mouse_event)?,
             _ => None,
         };
-        Ok(r)
+
+        if let Some(action) = r {
+            self.send(action)?;
+        };
+
+        Ok(())
     }
     /// Handle key events and produce actions if necessary.
     ///
@@ -107,8 +112,8 @@ pub trait Component {
     ///
     /// * `Result<Option<Action>>` - An action to be processed or none.
     #[allow(unused_variables)]
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        Ok(None)
+    fn update(&mut self, action: Action) -> Result<()> {
+        Ok(())
     }
     /// Render the component on the screen. (REQUIRED)
     ///
@@ -122,4 +127,8 @@ pub trait Component {
     /// * `Result<()>` - An Ok result or an error.
     // fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()>;
     fn draw(&mut self, f: &mut Frame<'_>, area: Rect);
+
+    fn send(&self, action: Action) -> Result<()> {
+        Ok(())
+    }
 }

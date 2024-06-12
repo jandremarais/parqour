@@ -61,28 +61,18 @@ impl FpsCounter {
 }
 
 impl Component for FpsCounter {
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
+    fn update(&mut self, action: Action) -> Result<()> {
         if let Action::Tick = action {
             self.app_tick()?
         };
         if let Action::Render = action {
             self.render_tick()?
         };
-        Ok(None)
+        Ok(())
     }
 
     // fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) -> Result<()> {
     fn draw(&mut self, f: &mut Frame<'_>, rect: Rect) {
-        let rects = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(vec![
-                Constraint::Length(1), // first row
-                Constraint::Min(0),
-            ])
-            .split(rect);
-
-        let rect = rects[1];
-
         let s = format!(
             "{:.2} ticks per sec (app) {:.2} frames per sec (render)",
             self.app_fps, self.render_fps
@@ -93,4 +83,8 @@ impl Component for FpsCounter {
         f.render_widget(block, rect);
         // Ok(())
     }
+
+    // fn send(&self, action: Action) -> Result<()> {
+    //     Ok(())
+    // }
 }

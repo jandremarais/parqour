@@ -2,7 +2,10 @@ use std::{collections::vec_deque::Iter, path::Path};
 
 use color_eyre::eyre::Result;
 use crossterm::event::KeyEvent;
-use ratatui::prelude::Rect;
+use ratatui::{
+    layout::{self, Constraint, Direction, Layout},
+    prelude::Rect,
+};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -19,56 +22,61 @@ struct AppComponents {
     footer: Box<dyn Component>,
 }
 
-// impl Iterator for AppComponents {
-//     type Item = Box<dyn Component>;
+impl Component for AppComponents {
+    fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> Result<()> {
+        self.header.register_action_handler(tx.clone())?;
+        self.footer.register_action_handler(tx)?;
+        Ok(())
+    }
 
-//     fn next(&mut self) -> Option<Self::Item> {
-//         vec![].iter_mut()
-//         todo!()
-//     }
-// }
+    fn register_config_handler(&mut self, config: Config) -> Result<()> {
+        self.header.register_config_handler(config.clone())?;
+        self.footer.register_config_handler(config)?;
+        Ok(())
+    }
 
-// impl<'a> IntoIterator for &'a mut AppComponents {
-//     type Item = &'a mut Box<dyn Component>;
-//     type IntoIter = std::slice::IterMut<'a, Box<dyn Component>>;
+    fn init(&mut self, area: Rect) -> Result<()> {
+        self.header.init(area)?;
+        self.footer.init(area)?;
+        Ok(())
+    }
 
-//     fn into_iter(self) -> Self::IntoIter {
-//         vec![self.header, self.footer].iter_mut()
-//     }
-// }
+    fn handle_events(&mut self, event: Option<tui::Event>) -> Result<()> {
+        self.header.handle_events(event.clone())?;
+        self.footer.handle_events(event.clone())?;
+        Ok(())
+    }
 
-// impl Component for AppComponents {
-//     fn register_action_handler(&mut self, tx: mpsc::UnboundedSender<Action>) -> Result<()> {
-//         self.header.register_action_handler(tx.clone())?;
-//         self.footer.register_action_handler(tx)?;
-//         Ok(())
-//     }
+    fn draw(&mut self, f: &mut tui::Frame<'_>, area: Rect) {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(1),
+                Constraint::Min(1),
+                Constraint::Length(1),
+            ])
+            .split(area);
+        self.header.draw(f, layout[0]);
+        self.footer.draw(f, layout[2]);
+    }
 
-//     fn register_config_handler(&mut self, config: Config) -> Result<()> {
-//         self.header.register_config_handler(config.clone())?;
-//         self.footer.register_config_handler(config)?;
-//         Ok(())
-//     }
+    fn update(&mut self, action: Action) -> Result<()> {
+        self.header.update(action.clone())?;
+        self.footer.update(action.clone())?;
+        Ok(())
+    }
 
-//     fn init(&mut self, area: Rect) -> Result<()> {
-//         self.header.init(area)?;
-//         self.footer.init(area)?;
-//         Ok(())
-//     }
-
-//     fn handle_events(&mut self, event: Option<tui::Event>) -> Result<Option<Action>> {
-//         if let Some(action) = self.header.handle_events(Some(event.clone()))? {
-//             action_tx.send(action)?;
-//         }
-//     }
-// }
+    // fn send(&self, action: Action) -> Result<()> {
+    //     Ok(())
+    // }
+}
 
 pub struct App {
     pub config: Config,
     pub tick_rate: f64,
     pub frame_rate: f64,
-    pub components: Vec<Box<dyn Component>>,
-    // pub components: AppComponents,
+    // pub components: Vec<Box<dyn Component>>,
+    pub components: AppComponents,
     pub should_quit: bool,
     pub should_suspend: bool,
     pub mode: Mode,
@@ -83,15 +91,15 @@ impl App {
         let config = Config::new()?;
         let mode = Mode::Home;
         let filepath = path.display().to_string();
-        // let components = AppComponents {
-        //     header: Box::new(home),
-        //     footer: Box::new(fps),
-        // };
+        let components = AppComponents {
+            header: Box::new(home),
+            footer: Box::new(fps),
+        };
         Ok(Self {
             tick_rate,
             frame_rate,
-            components: vec![Box::new(home), Box::new(fps)],
-            // components,
+            // components: vec![Box::new(home), Box::new(fps)],
+            components,
             should_quit: false,
             should_suspend: false,
             config,
@@ -112,25 +120,25 @@ impl App {
 
         // let components = [self.components.header, self.components.footer];
 
-        // self.components.register_action_handler(action_tx.clone())?;
+        self.components.register_action_handler(action_tx.clone())?;
         // self.header.register_action_handler(action_tx.clone())?;
         // self.footer.register_action_handler(action_tx.clone())?;
-        for component in self.components.iter_mut() {
-            component.register_action_handler(action_tx.clone())?;
-        }
-
-        // self.components
-        // .register_config_handler(self.config.clone())?;
         // for component in self.components.iter_mut() {
-        for component in self.components.iter_mut() {
-            component.register_config_handler(self.config.clone())?;
-        }
+        //     component.register_action_handler(action_tx.clone())?;
+        // }
 
-        // self.components.init(tui.size()?);
+        self.components
+            .register_config_handler(self.config.clone())?;
         // for component in self.components.iter_mut() {
-        for component in self.components.iter_mut() {
-            component.init(tui.size()?)?;
-        }
+        // for component in self.components.iter_mut() {
+        //     component.register_config_handler(self.config.clone())?;
+        // }
+
+        self.components.init(tui.size()?)?;
+        // for component in self.components.iter_mut() {
+        // for component in self.components.iter_mut() {
+        //     component.init(tui.size()?)?;
+        // }
 
         loop {
             if let Some(e) = tui.next().await {
@@ -160,11 +168,12 @@ impl App {
                     _ => {}
                 }
                 // for component in self.components.iter_mut() {
-                for component in self.components.iter_mut() {
-                    if let Some(action) = component.handle_events(Some(e.clone()))? {
-                        action_tx.send(action)?;
-                    }
-                }
+                self.components.handle_events(Some(e.clone()));
+                // for component in self.components.iter_mut() {
+                //     if let Some(action) = component.handle_events(Some(e.clone()))? {
+                //         action_tx.send(action)?;
+                //     }
+                // }
             }
 
             while let Ok(action) = action_rx.try_recv() {
@@ -181,38 +190,41 @@ impl App {
                     Action::Resize(w, h) => {
                         tui.resize(Rect::new(0, 0, w, h))?;
                         tui.draw(|f| {
-                            for component in self.components.iter_mut() {
-                                // let r = component.draw(f, f.size());
-                                // if let Err(e) = r {
-                                //     component
-                                //         .action_tx
-                                //         .send(Action::Error(format!("Failed to draw: {:?}", e)))
-                                //         .unwrap();
-                                // }
-                                component.draw(f, f.size());
-                            }
+                            self.components.draw(f, f.size());
+                            // for component in self.components.iter_mut() {
+                            // let r = component.draw(f, f.size());
+                            // if let Err(e) = r {
+                            //     component
+                            //         .action_tx
+                            //         .send(Action::Error(format!("Failed to draw: {:?}", e)))
+                            //         .unwrap();
+                            // }
+                            // component.draw(f, f.size());
+                            // }
                         })?;
                     }
                     Action::Render => {
                         tui.draw(|f| {
-                            for component in self.components.iter_mut() {
-                                // let r = component.draw(f, f.size());
-                                // if let Err(e) = r {
-                                //     action_tx
-                                //         .send(Action::Error(format!("Failed to draw: {:?}", e)))
-                                //         .unwrap();
-                                // }
-                                component.draw(f, f.size());
-                            }
+                            self.components.draw(f, f.size());
+                            // for component in self.components.iter_mut() {
+                            // let r = component.draw(f, f.size());
+                            // if let Err(e) = r {
+                            //     action_tx
+                            //         .send(Action::Error(format!("Failed to draw: {:?}", e)))
+                            //         .unwrap();
+                            // }
+                            // component.draw(f, f.size());
+                            // }
                         })?;
                     }
                     _ => {}
                 }
-                for component in self.components.iter_mut() {
-                    if let Some(action) = component.update(action.clone())? {
-                        action_tx.send(action)?
-                    };
-                }
+                self.components.update(action.clone())?
+                // for component in self.components.iter_mut() {
+                //     if let Some(action) = component.update(action.clone())? {
+                //         action_tx.send(action)?
+                //     };
+                // }
             }
             if self.should_suspend {
                 tui.suspend()?;

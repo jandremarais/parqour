@@ -10,6 +10,7 @@ use super::{Component, Frame};
 use crate::{
     action::Action,
     config::{Config, KeyBindings},
+    trace_dbg,
 };
 
 #[derive(Default)]
@@ -35,17 +36,28 @@ impl Component for Home {
         Ok(())
     }
 
-    fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        match action {
-            Action::Tick => {}
-            _ => {}
+    fn update(&mut self, action: Action) -> Result<()> {
+        let r = match action {
+            Action::Tick => Ok(()),
+            Action::Move => Err("Failed"),
+            _ => Ok(()),
+        };
+        if let Err(v) = r {
+            self.send(Action::Quit)?;
         }
-        Ok(None)
+        Ok(())
     }
 
     // fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
     fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
         f.render_widget(Paragraph::new("Parqour"), area);
         // Ok(())
+    }
+
+    fn send(&self, action: Action) -> Result<()> {
+        if let Some(tx) = self.command_tx.clone() {
+            tx.send(action)?
+        }
+        Ok(())
     }
 }
