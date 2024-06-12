@@ -1,3 +1,8 @@
+use clap::Parser;
+
+mod cli;
+pub mod utils;
+
 fn main() {
-    println!("Hello, world!");
+    let _args = cli::Args::parse();
 }
