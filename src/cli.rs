@@ -18,8 +18,8 @@ pub fn version() -> String {
     let commit_hash = env!("PARQOUR_GIT_INFO");
 
     // let current_exe_path = PathBuf::from(clap::crate_name!()).display().to_string();
-    let config_dir_path = get_config_dir().unwrap().display().to_string();
-    let data_dir_path = get_data_dir().unwrap().display().to_string();
+    let config_dir_path = get_config_dir().display().to_string();
+    let data_dir_path = get_data_dir().display().to_string();
 
     format!(
         "\
