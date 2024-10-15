@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.89"
+arrow = { version = "53.1.0", default-features = false, features = ["prettyprint"] }
 clap = { version = "4.5.20", features = ["derive"] }
+color-eyre = "0.6.3"
+crossterm = "0.28.1"
 parquet = "53.1.0"
 ratatui = "0.28.1"
