@@ -1,8 +1,9 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style, Stylize},
-    text::Text,
-    widgets::{Block, Borders, Paragraph},
+    symbols,
+    text::{Line, Span, Text},
+    widgets::{Block, Borders, Paragraph, Tabs},
     Frame,
 };
 
@@ -19,19 +20,21 @@ pub fn render(state: &mut State, frame: &mut Frame) {
         .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(screen[0]);
 
-    frame.render_widget(
-        Paragraph::new(Text::styled(
-            " parqour ",
-            Style::default().bg(Color::LightCyan).fg(Color::DarkGray),
-        )),
-        title_line[0],
-    );
-    frame.render_widget(
-        Paragraph::new(Text::styled(
-            format!(" {} ", state.viewer.filename()),
-            Style::default().bg(Color::LightCyan).fg(Color::DarkGray),
-        ))
-        .right_aligned(),
-        title_line[1],
-    );
+    let tabs = Tabs::new(vec!["data", "metadata"])
+        .highlight_style(Style::default().yellow())
+        .select(state.tab)
+        .divider("|")
+        .padding(" ", " ");
+
+    frame.render_widget(tabs, title_line[0]);
+    let label = Paragraph::new(Line::from(vec![
+        Span::from(" parqour ")
+            .bg(Color::LightMagenta)
+            .fg(Color::DarkGray),
+        Span::from(format!(" {} ", state.viewer.filename()))
+            .bg(Color::LightCyan)
+            .fg(Color::DarkGray),
+    ]))
+    .right_aligned();
+    frame.render_widget(label, title_line[1]);
 }

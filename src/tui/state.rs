@@ -7,6 +7,7 @@ use super::{command::Command, event::Event, Result};
 pub struct State {
     pub running: bool,
     pub viewer: Viewer,
+    pub tab: usize,
 }
 
 impl State {
@@ -14,6 +15,7 @@ impl State {
         Self {
             running: true,
             viewer,
+            tab: 0,
         }
     }
 
@@ -25,6 +27,17 @@ impl State {
         match command {
             Command::Exit => {
                 self.running = false;
+            }
+            Command::Next => {
+                let new_tab = self.tab + 1;
+                if new_tab > 1 {
+                    self.tab = 0;
+                } else {
+                    self.tab = new_tab;
+                }
+            }
+            Command::Previous => {
+                self.tab = self.tab.checked_sub(1).unwrap_or(1);
             }
             Command::Nothing => {}
         }
