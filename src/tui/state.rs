@@ -2,12 +2,17 @@ use std::sync::mpsc;
 
 use crate::app::Viewer;
 
-use super::{command::Command, event::Event, Result};
+use super::{
+    command::Command,
+    event::Event,
+    ui::{Tab, N_TABS},
+    Result,
+};
 
 pub struct State {
     pub running: bool,
     pub viewer: Viewer,
-    pub tab: usize,
+    pub tab: Tab,
 }
 
 impl State {
@@ -15,7 +20,7 @@ impl State {
         Self {
             running: true,
             viewer,
-            tab: 0,
+            tab: Default::default(),
         }
     }
 
@@ -29,15 +34,15 @@ impl State {
                 self.running = false;
             }
             Command::Next => {
-                let new_tab = self.tab + 1;
-                if new_tab > 1 {
-                    self.tab = 0;
+                let new_tab = self.tab as usize + 1;
+                if new_tab > N_TABS {
+                    self.tab = 0.into();
                 } else {
-                    self.tab = new_tab;
+                    self.tab = new_tab.into();
                 }
             }
             Command::Previous => {
-                self.tab = self.tab.checked_sub(1).unwrap_or(1);
+                self.tab = (self.tab as usize).checked_sub(1).unwrap_or(N_TABS).into();
             }
             Command::Nothing => {}
         }

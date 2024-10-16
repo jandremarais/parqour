@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     symbols,
     text::{Line, Span, Text},
@@ -22,7 +22,7 @@ pub fn render(state: &mut State, frame: &mut Frame) {
 
     let tabs = Tabs::new(vec!["data", "metadata"])
         .highlight_style(Style::default().yellow())
-        .select(state.tab)
+        .select(state.tab as usize)
         .divider("|")
         .padding(" ", " ");
 
@@ -37,4 +37,54 @@ pub fn render(state: &mut State, frame: &mut Frame) {
     ]))
     .right_aligned();
     frame.render_widget(label, title_line[1]);
+
+    match state.tab {
+        Tab::Data => {
+            frame.render_widget(Paragraph::new("Data"), screen[1]);
+        }
+        Tab::Metadata => render_metadata(state, frame, screen[1]),
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Tab {
+    Data = 0,
+    Metadata = 1,
+}
+
+impl Default for Tab {
+    fn default() -> Self {
+        Self::Data
+    }
+}
+
+impl Tab {
+    const fn get_headers() -> &'static [&'static str] {
+        &["data", "metadata"]
+    }
+}
+
+impl From<usize> for Tab {
+    fn from(v: usize) -> Self {
+        match v {
+            0 => Self::Data,
+            1 => Self::Metadata,
+            _ => Self::default(),
+        }
+    }
+}
+
+pub const N_TABS: usize = Tab::get_headers().len() - 1;
+
+pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
+    let p = Paragraph::new(Text::from(
+        state
+            .viewer
+            .arrow_schema()
+            .fields()
+            .iter()
+            .map(|f| Line::from(f.name().to_string().fg(Color::Red)))
+            .collect::<Vec<Line>>(),
+    ));
+    frame.render_widget(p, rect);
 }
