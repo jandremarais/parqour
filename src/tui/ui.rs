@@ -81,11 +81,8 @@ impl From<usize> for Tab {
 pub const N_TABS: usize = Tab::get_headers().len() - 1;
 
 pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
-    // let parquet_metadata = state.viewer.parquet_metadata();
-    // let file_metadata = parquet_metadata.file_metadata();
-    // let parquet_schema = file_metadata.schema_descr();
-
-    let metadata_height = (6 + state.viewer.file_kv_data.len() + 1) as u16;
+    let kv_n = state.viewer.file_kv_data.len();
+    let metadata_height = if kv_n == 0 { 4 } else { 5 + kv_n } as u16;
     let schema_height = 3 + state.viewer.num_cols as u16;
     let layout = Layout::vertical([
         Constraint::Length(metadata_height),
@@ -104,6 +101,9 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
         Line::from(vec![
             Span::styled("Version: ", Style::default().fg(ThemeColor::Love.into())),
             Span::raw(&state.viewer.version),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled("Created by: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(&state.viewer.created_by),
         ]),
         Line::from(vec![
             Span::styled(
@@ -111,17 +111,18 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
                 Style::default().fg(ThemeColor::Love.into()),
             ),
             Span::raw(state.viewer.num_rows.to_string()),
-        ]),
-        Line::from(vec![
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
             Span::styled(
                 "Number of columns: ",
                 Style::default().fg(ThemeColor::Love.into()),
             ),
             Span::raw(state.viewer.num_cols.to_string()),
-        ]),
-        Line::from(vec![
-            Span::styled("Created by: ", Style::default().fg(ThemeColor::Love.into())),
-            Span::raw(&state.viewer.created_by),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled(
+                "Number of row groups ",
+                Style::default().fg(ThemeColor::Love.into()),
+            ),
+            Span::raw(state.viewer.num_row_groups.to_string()),
         ]),
     ];
     if !state.viewer.file_kv_data.is_empty() {

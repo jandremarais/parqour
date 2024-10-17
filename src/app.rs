@@ -13,13 +13,14 @@ pub struct Viewer {
     pub version: String,
     pub num_rows: i64,
     pub num_cols: usize,
+    pub num_row_groups: usize,
     pub created_by: String,
     pub file_kv_data: Vec<(String, String)>,
     pub schema_table_data: Vec<[String; 9]>,
     pub max_col_name_width: usize,
     // parquet_metadata: Arc<ParquetMetaData>,
-    reader: ParquetRecordBatchReader,
     pub file_stem: String,
+    reader: ParquetRecordBatchReader,
 }
 
 impl Viewer {
@@ -32,6 +33,7 @@ impl Viewer {
             .file_metadata()
             .schema_descr()
             .num_columns();
+        let num_row_groups = parquet_metadata.num_row_groups();
         let created_by = parquet_metadata
             .file_metadata()
             .created_by()
@@ -102,6 +104,15 @@ impl Viewer {
         }
 
         let file_stem = name.unwrap_or("no name".to_string());
+
+        // for grp in parquet_metadata.row_groups() {
+        //     //
+        //     grp.enco
+        // }
+
+        // dbg!(parquet_metadata.row_groups().iter().next());
+        // panic!("stop");
+
         let arrow_metadata =
             ArrowReaderMetadata::try_new(Arc::clone(&parquet_metadata), Default::default())?;
         // arrow_metadata.schema()
@@ -114,13 +125,14 @@ impl Viewer {
             version,
             num_rows,
             num_cols,
+            num_row_groups,
             created_by,
             file_kv_data,
             schema_table_data,
             max_col_name_width,
             // parquet_metadata,
-            reader,
             file_stem,
+            reader,
         })
     }
 
