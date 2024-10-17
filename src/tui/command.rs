@@ -21,10 +21,10 @@ impl From<KeyEvent> for Command {
             KeyCode::Esc | KeyCode::Char('q') => Self::Exit,
             KeyCode::BackTab => Self::Previous(ScrollType::Tab),
             KeyCode::Tab => Self::Next(ScrollType::Tab),
-            KeyCode::Char('j') => Self::Next(ScrollType::Table),
-            KeyCode::Char('k') => Self::Previous(ScrollType::Table),
-            KeyCode::Char('l') => Self::Next(ScrollType::Chunk),
-            KeyCode::Char('h') => Self::Previous(ScrollType::Chunk),
+            KeyCode::Char('j') | KeyCode::Down => Self::Next(ScrollType::Table),
+            KeyCode::Char('k') | KeyCode::Up => Self::Previous(ScrollType::Table),
+            KeyCode::Char('l') | KeyCode::Right => Self::Next(ScrollType::Chunk),
+            KeyCode::Char('h') | KeyCode::Left => Self::Previous(ScrollType::Chunk),
             _ => Self::Nothing,
         }
     }

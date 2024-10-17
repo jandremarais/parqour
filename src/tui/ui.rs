@@ -1,9 +1,9 @@
 use parquet::file::statistics::Statistics;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
     text::{Line, Span},
-    widgets::{Block, Paragraph, Row, Table, Tabs},
+    widgets::{block::Title, Block, Paragraph, Row, Table, Tabs},
     Frame,
 };
 
@@ -23,7 +23,11 @@ pub fn render(state: &mut State, frame: &mut Frame) {
 
     let title_line = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints(vec![
+            Constraint::Length(17),
+            Constraint::Min(0),
+            Constraint::Percentage(50),
+        ])
         .split(screen[0]);
 
     let tabs = Tabs::new(Tab::get_headers().to_vec())
@@ -33,6 +37,8 @@ pub fn render(state: &mut State, frame: &mut Frame) {
         .padding(" ", " ");
 
     frame.render_widget(tabs, title_line[0]);
+    frame.render_widget(" (Tab) ".fg(ThemeColor::Subtle), title_line[1]);
+
     let label = Paragraph::new(Line::from(vec![
         Span::from(" parqour ")
             .bg(ThemeColor::Foam)
@@ -40,7 +46,7 @@ pub fn render(state: &mut State, frame: &mut Frame) {
         Span::from(format!(" {} ", &state.viewer.file_stem)).bg(ThemeColor::Pine),
     ]))
     .right_aligned();
-    frame.render_widget(label, title_line[1]);
+    frame.render_widget(label, title_line[2]);
 
     match state.tab {
         Tab::Data => {
@@ -83,12 +89,10 @@ pub const N_TABS: usize = Tab::get_headers().len() - 1;
 pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
     let kv_n = state.viewer.file_kv_data.len();
     let metadata_height = if kv_n == 0 { 4 } else { 5 + kv_n } as u16;
-    // let schema_height = 3 + state.viewer.num_cols as u16;
     let layout = Layout::vertical([
         Constraint::Length(metadata_height),
         Constraint::Min(5),
-        // Constraint::Length(schema_height),
-        Constraint::Length(10),
+        Constraint::Length(5),
     ])
     .split(rect);
     let file_metadata_block = Block::bordered()
@@ -97,6 +101,7 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
 
     let parquet_schema_block = Block::bordered()
         .title("Schema".bold())
+        .title(Title::from("(↑/↓)").alignment(Alignment::Center))
         .fg(ThemeColor::Subtle);
 
     let mut file_metadata_lines = vec![
@@ -158,17 +163,17 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
     let table = Table::new(
         rows,
         [
-            // Constraint::Length(state.viewer.max_col_name_width as u16),
-            Constraint::Min(state.viewer.max_col_name_width as u16),
-            Constraint::Min(11),
+            Constraint::Max(state.viewer.max_col_name_width as u16),
+            // Constraint::Min(state.viewer.max_col_name_width as u16),
+            Constraint::Max(11),
             Constraint::Min(12),
-            Constraint::Min(14),
-            Constraint::Min(13),
-            Constraint::Min(4),
-            Constraint::Min(5),
-            Constraint::Min(9),
-            Constraint::Min(1),
-            Constraint::Min(0),
+            Constraint::Max(16),
+            Constraint::Max(20),
+            Constraint::Max(11),
+            Constraint::Max(5),
+            Constraint::Max(10),
+            Constraint::Max(10),
+            // Constraint::Min(0),
         ],
     )
     .column_spacing(1)
@@ -327,9 +332,6 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
         chunk_metadata_lines.push(l);
     };
 
-    // let chunk_block = Block::bordered()
-    //     .title(format!("Chunk metadata: {}", col_name).bold())
-    //     .fg(ThemeColor::Subtle);
     let chunk_block = Block::bordered()
         .title(
             Line::from(vec![
@@ -341,6 +343,7 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
             ])
             .bold(),
         )
+        .title(Title::from("(←/→)").alignment(Alignment::Center))
         .fg(ThemeColor::Subtle);
 
     let p = Paragraph::new(chunk_metadata_lines)
