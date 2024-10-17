@@ -26,7 +26,6 @@ pub fn render(state: &mut State, frame: &mut Frame) {
         .split(screen[0]);
 
     let tabs = Tabs::new(Tab::get_headers().to_vec())
-        // .fg(ThemeColor::Text)
         .highlight_style(Style::default().fg(ThemeColor::Iris.into()))
         .select(state.tab as usize)
         .divider("|")
@@ -83,10 +82,12 @@ pub const N_TABS: usize = Tab::get_headers().len() - 1;
 pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
     let kv_n = state.viewer.file_kv_data.len();
     let metadata_height = if kv_n == 0 { 4 } else { 5 + kv_n } as u16;
-    let schema_height = 3 + state.viewer.num_cols as u16;
+    // let schema_height = 3 + state.viewer.num_cols as u16;
     let layout = Layout::vertical([
         Constraint::Length(metadata_height),
-        Constraint::Length(schema_height),
+        Constraint::Min(5),
+        // Constraint::Length(schema_height),
+        Constraint::Length(10),
     ])
     .split(rect);
     let file_metadata_block = Block::bordered()
@@ -106,20 +107,14 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
             Span::raw(&state.viewer.created_by),
         ]),
         Line::from(vec![
-            Span::styled(
-                "Number of rows: ",
-                Style::default().fg(ThemeColor::Love.into()),
-            ),
+            Span::styled("# rows: ", Style::default().fg(ThemeColor::Love.into())),
             Span::raw(state.viewer.num_rows.to_string()),
             Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
-            Span::styled(
-                "Number of columns: ",
-                Style::default().fg(ThemeColor::Love.into()),
-            ),
+            Span::styled("# columns: ", Style::default().fg(ThemeColor::Love.into())),
             Span::raw(state.viewer.num_cols.to_string()),
             Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
             Span::styled(
-                "Number of row groups ",
+                "# row groups ",
                 Style::default().fg(ThemeColor::Love.into()),
             ),
             Span::raw(state.viewer.num_row_groups.to_string()),
@@ -188,9 +183,70 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
         ])
         .fg(ThemeColor::Love),
     )
+    .highlight_style(Style::default().fg(ThemeColor::Iris.into()).bold())
     .block(parquet_schema_block);
 
-    frame.render_widget(table, layout[1]);
+    let col_selected = state.table_state.selected().unwrap();
+
+    let chunk_meta = state.viewer.row_groups[state.chunk_ind].column(col_selected);
+    let col_name = chunk_meta.column_descr().name();
+    let num_values = chunk_meta.num_values().to_string();
+    let encodings = chunk_meta
+        .encodings()
+        .iter()
+        .map(|e| e.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let chunk_metadata_lines = vec![
+        Line::from(vec![
+            Span::styled("# values: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(&num_values),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled("Encodings: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(&encodings),
+        ]),
+        // Line::from(vec![
+        //     Span::styled(
+        //         "Number of rows: ",
+        //         Style::default().fg(ThemeColor::Love.into()),
+        //     ),
+        //     Span::raw(state.viewer.num_rows.to_string()),
+        //     Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+        //     Span::styled(
+        //         "Number of columns: ",
+        //         Style::default().fg(ThemeColor::Love.into()),
+        //     ),
+        //     Span::raw(state.viewer.num_cols.to_string()),
+        //     Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+        //     Span::styled(
+        //         "Number of row groups ",
+        //         Style::default().fg(ThemeColor::Love.into()),
+        //     ),
+        //     Span::raw(state.viewer.num_row_groups.to_string()),
+        // ]),
+    ];
+    // let chunk_block = Block::bordered()
+    //     .title(format!("Chunk metadata: {}", col_name).bold())
+    //     .fg(ThemeColor::Subtle);
+    let chunk_block = Block::bordered()
+        .title(
+            Line::from(vec![
+                Span::raw("Chunk metadata: "),
+                Span::styled(
+                    format!("{}[{}]", col_name, state.chunk_ind),
+                    Style::default().fg(ThemeColor::Iris.into()),
+                ),
+            ])
+            .bold(),
+        )
+        .fg(ThemeColor::Subtle);
+
+    let p = Paragraph::new(chunk_metadata_lines)
+        .block(chunk_block)
+        .fg(ThemeColor::Text);
+    frame.render_stateful_widget(table, layout[1], &mut state.table_state);
+    frame.render_widget(p, layout[2]);
 }
 
 #[allow(dead_code)]

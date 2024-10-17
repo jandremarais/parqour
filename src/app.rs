@@ -3,7 +3,7 @@ use parquet::{
     arrow::arrow_reader::{
         ArrowReaderMetadata, ParquetRecordBatchReader, ParquetRecordBatchReaderBuilder,
     },
-    file::metadata::ParquetMetaDataReader,
+    file::metadata::{ParquetMetaDataReader, RowGroupMetaData},
 };
 
 use crate::error::Result;
@@ -20,6 +20,7 @@ pub struct Viewer {
     pub max_col_name_width: usize,
     // parquet_metadata: Arc<ParquetMetaData>,
     pub file_stem: String,
+    pub row_groups: Vec<RowGroupMetaData>,
     reader: ParquetRecordBatchReader,
 }
 
@@ -121,6 +122,9 @@ impl Viewer {
         // let builder = ParquetRecordBatchReaderBuilder::try_new(file)?;
         let builder = ParquetRecordBatchReaderBuilder::new_with_metadata(file, arrow_metadata);
         let reader = builder.build()?;
+
+        let row_groups = parquet_metadata.row_groups().to_vec();
+
         Ok(Self {
             version,
             num_rows,
@@ -130,6 +134,7 @@ impl Viewer {
             file_kv_data,
             schema_table_data,
             max_col_name_width,
+            row_groups,
             // parquet_metadata,
             file_stem,
             reader,
@@ -139,16 +144,4 @@ impl Viewer {
     pub fn arrow_schema(&self) -> SchemaRef {
         self.reader.schema()
     }
-
-    // pub fn parquet_metadata(&self) -> Arc<ParquetMetaData> {
-    //     self.parquet_metadata.clone()
-    // }
-
-    // pub fn file_metadata(&self) -> &FileMetaData {
-    //     self.parquet_metadata.file_metadata()
-    // }
-
-    // pub fn parquet_schema(&self) -> &SchemaDescriptor {
-    //     self.file_metadata().schema_descr()
-    // }
 }
