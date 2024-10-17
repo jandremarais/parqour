@@ -1,3 +1,4 @@
+use parquet::file::statistics::Statistics;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style, Stylize},
@@ -157,6 +158,7 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
     let table = Table::new(
         rows,
         [
+            // Constraint::Length(state.viewer.max_col_name_width as u16),
             Constraint::Min(state.viewer.max_col_name_width as u16),
             Constraint::Min(11),
             Constraint::Min(12),
@@ -165,7 +167,8 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
             Constraint::Min(4),
             Constraint::Min(5),
             Constraint::Min(9),
-            Constraint::Min(10),
+            Constraint::Min(1),
+            Constraint::Min(0),
         ],
     )
     .column_spacing(1)
@@ -197,8 +200,11 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
         .map(|e| e.to_string())
         .collect::<Vec<_>>()
         .join(", ");
+    let compression = chunk_meta.compression().to_string();
+    let compressed_size = chunk_meta.compressed_size() / 1000;
+    let uncompressed_size = chunk_meta.uncompressed_size() / 1000;
 
-    let chunk_metadata_lines = vec![
+    let mut chunk_metadata_lines = vec![
         Line::from(vec![
             Span::styled("# values: ", Style::default().fg(ThemeColor::Love.into())),
             Span::raw(&num_values),
@@ -206,26 +212,121 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
             Span::styled("Encodings: ", Style::default().fg(ThemeColor::Love.into())),
             Span::raw(&encodings),
         ]),
-        // Line::from(vec![
-        //     Span::styled(
-        //         "Number of rows: ",
-        //         Style::default().fg(ThemeColor::Love.into()),
-        //     ),
-        //     Span::raw(state.viewer.num_rows.to_string()),
-        //     Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
-        //     Span::styled(
-        //         "Number of columns: ",
-        //         Style::default().fg(ThemeColor::Love.into()),
-        //     ),
-        //     Span::raw(state.viewer.num_cols.to_string()),
-        //     Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
-        //     Span::styled(
-        //         "Number of row groups ",
-        //         Style::default().fg(ThemeColor::Love.into()),
-        //     ),
-        //     Span::raw(state.viewer.num_row_groups.to_string()),
-        // ]),
+        Line::from(vec![
+            Span::styled(
+                "Compression: ",
+                Style::default().fg(ThemeColor::Love.into()),
+            ),
+            Span::raw(compression),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled("Compressed: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(format!("{}kB", compressed_size)),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled(
+                "Uncompressed: ",
+                Style::default().fg(ThemeColor::Love.into()),
+            ),
+            Span::raw(format!("{}kB", uncompressed_size)),
+        ]),
     ];
+
+    if let Some(stats) = chunk_meta.statistics() {
+        let distinct_cnt = stats
+            .distinct_count_opt()
+            .map_or("".to_string(), |v| v.to_string());
+        let null_cnt = stats
+            .null_count_opt()
+            .map_or("".to_string(), |v| v.to_string());
+        let (min, max) = match stats {
+            Statistics::Boolean(value_stats) => {
+                let min_str = value_stats
+                    .min_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                let max_str = value_stats
+                    .max_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                (min_str, max_str)
+            }
+            Statistics::Int32(value_stats) => {
+                let min_str = value_stats
+                    .min_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                let max_str = value_stats
+                    .max_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                (min_str, max_str)
+            }
+            Statistics::Int64(value_stats) => {
+                let min_str = value_stats
+                    .min_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                let max_str = value_stats
+                    .max_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                (min_str, max_str)
+            }
+            Statistics::Int96(value_stats) => {
+                let min_str = value_stats
+                    .min_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                let max_str = value_stats
+                    .max_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                (min_str, max_str)
+            }
+            Statistics::Float(value_stats) => {
+                let min_str = value_stats
+                    .min_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                let max_str = value_stats
+                    .max_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                (min_str, max_str)
+            }
+            Statistics::Double(value_stats) => {
+                let min_str = value_stats
+                    .min_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                let max_str = value_stats
+                    .max_opt()
+                    .map_or("".to_string(), |v| v.to_string());
+                (min_str, max_str)
+            }
+            Statistics::ByteArray(value_stats) => {
+                let min_str = value_stats.min_opt().map_or("".to_string(), |v| {
+                    std::str::from_utf8(v.data()).unwrap().to_string()
+                });
+                let max_str = value_stats.max_opt().map_or("".to_string(), |v| {
+                    std::str::from_utf8(v.data()).unwrap().to_string()
+                });
+                (min_str, max_str)
+            }
+            Statistics::FixedLenByteArray(value_stats) => {
+                let min_str = value_stats.min_opt().map_or("".to_string(), |v| {
+                    std::str::from_utf8(v.data()).unwrap().to_string()
+                });
+                let max_str = value_stats.max_opt().map_or("".to_string(), |v| {
+                    std::str::from_utf8(v.data()).unwrap().to_string()
+                });
+                (min_str, max_str)
+            }
+        };
+        let l = Line::from(vec![
+            Span::styled("Min: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(min),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled("Max: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(max),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled("# distinct: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(distinct_cnt),
+            Span::styled("  |  ", Style::default().fg(ThemeColor::Rose.into())),
+            Span::styled("# null: ", Style::default().fg(ThemeColor::Love.into())),
+            Span::raw(null_cnt),
+        ]);
+        chunk_metadata_lines.push(l);
+    };
+
     // let chunk_block = Block::bordered()
     //     .title(format!("Chunk metadata: {}", col_name).bold())
     //     .fg(ThemeColor::Subtle);
