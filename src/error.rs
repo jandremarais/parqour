@@ -1,3 +1,4 @@
+use arrow::error::ArrowError;
 use parquet::errors::ParquetError;
 
 #[derive(Debug, thiserror::Error)]
@@ -8,6 +9,9 @@ pub enum Error {
 
     #[error("parquet error: `{0}`")]
     ParquetError(#[from] ParquetError),
+
+    #[error("arrow error: `{0}`")]
+    ArrowError(#[from] ArrowError),
 
     /// Error that may occur while receiving messages from the channel.
     #[error("Channel receive error: `{0}`")]

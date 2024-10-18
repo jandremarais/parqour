@@ -11,8 +11,8 @@ pub enum Command {
 #[derive(Debug, PartialEq, Eq)]
 pub enum ScrollType {
     Tab,
-    Table,
-    Chunk,
+    Vertical,
+    Horizontal,
 }
 
 impl From<KeyEvent> for Command {
@@ -21,10 +21,10 @@ impl From<KeyEvent> for Command {
             KeyCode::Esc | KeyCode::Char('q') => Self::Exit,
             KeyCode::BackTab => Self::Previous(ScrollType::Tab),
             KeyCode::Tab => Self::Next(ScrollType::Tab),
-            KeyCode::Char('j') | KeyCode::Down => Self::Next(ScrollType::Table),
-            KeyCode::Char('k') | KeyCode::Up => Self::Previous(ScrollType::Table),
-            KeyCode::Char('l') | KeyCode::Right => Self::Next(ScrollType::Chunk),
-            KeyCode::Char('h') | KeyCode::Left => Self::Previous(ScrollType::Chunk),
+            KeyCode::Char('j') | KeyCode::Down => Self::Next(ScrollType::Vertical),
+            KeyCode::Char('k') | KeyCode::Up => Self::Previous(ScrollType::Vertical),
+            KeyCode::Char('l') | KeyCode::Right => Self::Next(ScrollType::Horizontal),
+            KeyCode::Char('h') | KeyCode::Left => Self::Previous(ScrollType::Horizontal),
             _ => Self::Nothing,
         }
     }

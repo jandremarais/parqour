@@ -1,13 +1,22 @@
+use arrow::{
+    array::RecordBatch,
+    error::ArrowError,
+    util::{
+        display::{ArrayFormatter, FormatOptions},
+        pretty::pretty_format_batches,
+    },
+};
 use parquet::file::statistics::Statistics;
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Alignment, Constraint, Direction, Layout, Offset, Rect},
     style::{Color, Style, Stylize},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{block::Title, Block, Paragraph, Row, Table, Tabs},
     Frame,
 };
 
 use super::state::State;
+use crate::error::Result;
 
 pub fn render(state: &mut State, frame: &mut Frame) {
     frame.render_widget(
@@ -50,7 +59,7 @@ pub fn render(state: &mut State, frame: &mut Frame) {
 
     match state.tab {
         Tab::Data => {
-            frame.render_widget(Paragraph::new("Data"), screen[1]);
+            render_data(state, frame, screen[1]);
         }
         Tab::Metadata => render_metadata(state, frame, screen[1]),
     }
@@ -351,6 +360,98 @@ pub fn render_metadata(state: &mut State, frame: &mut Frame, rect: Rect) {
         .fg(ThemeColor::Text);
     frame.render_stateful_widget(table, layout[1], &mut state.table_state);
     frame.render_widget(p, layout[2]);
+}
+
+fn render_data(state: &mut State, frame: &mut Frame, rect: Rect) -> Result<()> {
+    let col_names: Vec<_> = state
+        .viewer
+        .batch
+        .schema_ref()
+        .fields()
+        .iter()
+        .skip(state.viewer.first_col)
+        .map(|f| f.name().to_owned())
+        .take(state.viewer.ncols)
+        .collect();
+    let table_slice = batch_slice(
+        &state.viewer.batch,
+        state.viewer.first_row,
+        state.viewer.first_col,
+        state.viewer.nrows,
+        state.viewer.ncols,
+    );
+
+    let col_width = 10_usize;
+    let col_constraints = Constraint::from_lengths(vec![col_width as u16; state.viewer.ncols]);
+    let col_layout = Layout::horizontal(col_constraints).split(rect);
+    for (i, (data, name)) in table_slice.iter().zip(col_names).enumerate() {
+        let mut lines = vec![Line::from(mask_string(&name, col_width - 1)).fg(ThemeColor::Love)];
+        lines.extend(data.iter().enumerate().map(|(j, c)| {
+            let bg_color = if j % 2 == 0 {
+                ThemeColor::HighlightLow
+            } else {
+                ThemeColor::Base
+            };
+            let fg_color = if ((i + state.viewer.first_col) == state.viewer.selected_col)
+                && ((j + state.viewer.first_row) == state.viewer.selected_row)
+            {
+                ThemeColor::Iris
+            } else {
+                ThemeColor::Text
+            };
+            let s = mask_string(c.as_str(), col_width);
+            Line::from(format!("{s} "))
+                .bg(bg_color)
+                .fg(fg_color)
+                .alignment(Alignment::Right)
+        }));
+        let col = Text::from(lines);
+        frame.render_widget(col, col_layout[i]);
+    }
+
+    Ok(())
+}
+
+fn mask_string(s: &str, max_len: usize) -> &str {
+    if s.chars().count() > max_len {
+        let mut char_indices = s.char_indices();
+        let truncate_at = char_indices.nth(max_len).map_or(s.len(), |(idx, _)| idx);
+        &s[..truncate_at]
+    } else {
+        s
+    }
+}
+fn batch_slice(
+    batch: &RecordBatch,
+    row: usize,
+    col: usize,
+    nrows: usize,
+    ncols: usize,
+) -> Vec<Vec<String>> {
+    let options = FormatOptions::default();
+    batch
+        .columns()
+        .iter()
+        .skip(col)
+        .map(|c| {
+            let formatter = ArrayFormatter::try_new(c.as_ref(), &options).unwrap();
+            (row..(row + nrows))
+                .map(|i| formatter.value(i).to_string())
+                .collect::<Vec<_>>()
+        })
+        .take(ncols)
+        .collect()
+}
+
+fn render_batch(batch: &RecordBatch, row: usize, col: usize, nrows: usize, ncols: usize) {
+    let col_names: Vec<_> = batch
+        .schema()
+        .fields()
+        .iter()
+        .skip(col)
+        .map(|f| f.name())
+        .take(ncols)
+        .collect();
 }
 
 #[allow(dead_code)]

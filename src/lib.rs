@@ -25,11 +25,6 @@ pub fn run(args: Args) -> Result<()> {
     let file = File::open(args.filename)?;
 
     let viewer = Viewer::new(file, name)?;
-    // dbg!(viewer.parquet_metadata());
-    // dbg!(viewer.arrow_schema());
-    // dbg!(viewer.file_metadata());
-    // dbg!(viewer.parquet_schema());
-
     start_tui(viewer)
 }
 

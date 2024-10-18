@@ -1,10 +1,14 @@
-use arrow::{array::RecordBatchReader, datatypes::SchemaRef};
+use arrow::{
+    array::RecordBatch,
+    util::display::{ArrayFormatter, FormatOptions},
+};
 use parquet::{
     arrow::arrow_reader::{
         ArrowReaderMetadata, ParquetRecordBatchReader, ParquetRecordBatchReaderBuilder,
     },
     file::metadata::{ParquetMetaDataReader, RowGroupMetaData},
 };
+use ratatui::widgets::Row;
 
 use crate::error::Result;
 use std::{fs::File, sync::Arc};
@@ -22,6 +26,14 @@ pub struct Viewer {
     pub file_stem: String,
     pub row_groups: Vec<RowGroupMetaData>,
     reader: ParquetRecordBatchReader,
+    pub batch: RecordBatch,
+    // pub batch_table:
+    pub selected_row: usize,
+    pub selected_col: usize,
+    pub first_row: usize,
+    pub nrows: usize,
+    pub first_col: usize,
+    pub ncols: usize,
 }
 
 impl Viewer {
@@ -106,24 +118,56 @@ impl Viewer {
 
         let file_stem = name.unwrap_or("no name".to_string());
 
-        // for grp in parquet_metadata.row_groups() {
-        //     //
-        //     grp.enco
-        // }
-
-        // dbg!(parquet_metadata.row_groups().iter().next());
-        // panic!("stop");
-
         let arrow_metadata =
             ArrowReaderMetadata::try_new(Arc::clone(&parquet_metadata), Default::default())?;
-        // arrow_metadata.schema()
-        // let metadata = ArrowReaderMetadata::load(&file, Default::default())?;
-        // metadata.metadata
-        // let builder = ParquetRecordBatchReaderBuilder::try_new(file)?;
-        let builder = ParquetRecordBatchReaderBuilder::new_with_metadata(file, arrow_metadata);
-        let reader = builder.build()?;
+        let builder = ParquetRecordBatchReaderBuilder::new_with_metadata(file, arrow_metadata)
+            .with_batch_size(64);
+        let mut reader = builder.build()?;
 
+        // TODO: consider keeping only the necessary data
         let row_groups = parquet_metadata.row_groups().to_vec();
+
+        let batch = reader.next().unwrap()?;
+
+        // let format_options = FormatOptions::default();
+        // let formatters = &batch
+        //     .columns()
+        //     .iter().skip()
+        //     .map(|c| ArrayFormatter::try_new(c.as_ref(), &format_options).unwrap())
+        //     .collect::<Vec<_>>();
+        // // let tmp = formatters[0].value(1).to_string();
+        // let tmp = formatters[0];
+
+        //     for row in 0..batch.num_rows() {
+        //         let mut cells = Vec::new();
+        //         for formatter in formatters {
+        //             cells.push(formatter.value(row).to_string());
+        //         }
+        //         // rows.push(Row::new(cells));
+        //         rows.push(cells);
+        //     }
+        // }
+        // dbg!(rows.len());
+        // panic!("stop");
+        // let table = Table::new(rows, vec![Constraint::Min(1); state.viewer.num_cols])
+        //     .column_spacing(1)
+        // .header(
+        //     Row::new(vec![
+        //         "Name",
+        //         "Column type",
+        //         "Logical type",
+        //         "Converted type",
+        //         "Physical type",
+        //         "Type length",
+        //         "Scale",
+        //         "Precision",
+        //         "Sort order",
+        //     ])
+        //     .fg(ThemeColor::Love),
+        // )
+        // .highlight_style(Style::default().fg(ThemeColor::Iris.into()).bold());
+        // dbg!(batch);
+        // panic!("stop");
 
         Ok(Self {
             version,
@@ -135,13 +179,15 @@ impl Viewer {
             schema_table_data,
             max_col_name_width,
             row_groups,
-            // parquet_metadata,
             file_stem,
             reader,
+            batch,
+            selected_row: 0,
+            selected_col: 0,
+            first_row: 0,
+            nrows: 50,
+            first_col: 0,
+            ncols: 10,
         })
-    }
-
-    pub fn arrow_schema(&self) -> SchemaRef {
-        self.reader.schema()
     }
 }
