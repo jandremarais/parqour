@@ -381,7 +381,7 @@ fn render_data(state: &mut State, frame: &mut Frame, rect: Rect) -> Result<()> {
         state.viewer.visible_cols,
     );
 
-    let col_width = 10_usize;
+    let col_width = 21_usize;
     let col_constraints =
         Constraint::from_lengths(vec![col_width as u16; state.viewer.visible_cols]);
     let col_layout = Layout::horizontal(col_constraints).split(rect);

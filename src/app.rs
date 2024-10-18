@@ -148,7 +148,7 @@ impl Viewer {
             selected_row: 0,
             selected_col: 0,
             row_offset: 0,
-            visible_rows: 30,
+            visible_rows: 50,
             col_offset: 0,
             visible_cols: 10,
         })
