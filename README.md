@@ -4,7 +4,9 @@
 
 ![Demo](demo.gif)
 
-> ![Note]
+### Getting started
+
+> [!NOTE]
 > Heavy work in progress
 
-### Getting started
+Install
