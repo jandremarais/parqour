@@ -25,16 +25,16 @@ pub struct Viewer {
     // parquet_metadata: Arc<ParquetMetaData>,
     pub file_stem: String,
     pub row_groups: Vec<RowGroupMetaData>,
-    reader: ParquetRecordBatchReader,
+    pub reader: ParquetRecordBatchReader,
     pub batch: RecordBatch,
     // pub batch_table:
     pub batch_size: usize,
     pub selected_row: usize,
     pub selected_col: usize,
-    pub first_row: usize,
-    pub nrows: usize,
-    pub first_col: usize,
-    pub ncols: usize,
+    pub row_offset: usize,
+    pub visible_rows: usize,
+    pub col_offset: usize,
+    pub visible_cols: usize,
 }
 
 impl Viewer {
@@ -131,46 +131,6 @@ impl Viewer {
 
         let batch = reader.next().unwrap()?;
 
-        // let format_options = FormatOptions::default();
-        // let formatters = &batch
-        //     .columns()
-        //     .iter().skip()
-        //     .map(|c| ArrayFormatter::try_new(c.as_ref(), &format_options).unwrap())
-        //     .collect::<Vec<_>>();
-        // // let tmp = formatters[0].value(1).to_string();
-        // let tmp = formatters[0];
-
-        //     for row in 0..batch.num_rows() {
-        //         let mut cells = Vec::new();
-        //         for formatter in formatters {
-        //             cells.push(formatter.value(row).to_string());
-        //         }
-        //         // rows.push(Row::new(cells));
-        //         rows.push(cells);
-        //     }
-        // }
-        // dbg!(rows.len());
-        // panic!("stop");
-        // let table = Table::new(rows, vec![Constraint::Min(1); state.viewer.num_cols])
-        //     .column_spacing(1)
-        // .header(
-        //     Row::new(vec![
-        //         "Name",
-        //         "Column type",
-        //         "Logical type",
-        //         "Converted type",
-        //         "Physical type",
-        //         "Type length",
-        //         "Scale",
-        //         "Precision",
-        //         "Sort order",
-        //     ])
-        //     .fg(ThemeColor::Love),
-        // )
-        // .highlight_style(Style::default().fg(ThemeColor::Iris.into()).bold());
-        // dbg!(batch);
-        // panic!("stop");
-
         Ok(Self {
             version,
             num_rows,
@@ -187,10 +147,10 @@ impl Viewer {
             batch_size,
             selected_row: 0,
             selected_col: 0,
-            first_row: 0,
-            nrows: 50,
-            first_col: 0,
-            ncols: 10,
+            row_offset: 0,
+            visible_rows: 30,
+            col_offset: 0,
+            visible_cols: 10,
         })
     }
 }

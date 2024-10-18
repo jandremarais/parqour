@@ -58,13 +58,16 @@ impl State {
                     }
                     Tab::Data => {
                         if self.viewer.selected_row == (self.viewer.batch_size - 1) {
-                            //
+                            // TODO: what to do when reached end of batch?
+                            // read in next batch but might need to be in separate thread?
+                            self.viewer.batch = self.viewer.reader.next().unwrap()?;
+                            // self.viewer.reader.
                         } else {
                             self.viewer.selected_row += 1;
                             if self.viewer.selected_row
-                                > (self.viewer.first_row + self.viewer.nrows - 1)
+                                > (self.viewer.row_offset + self.viewer.visible_rows - 1)
                             {
-                                self.viewer.first_row += 1;
+                                self.viewer.row_offset += 1;
                             }
                         }
                     }
@@ -76,13 +79,13 @@ impl State {
                     Tab::Data => {
                         if self.viewer.selected_col == (self.viewer.num_cols - 1) {
                             self.viewer.selected_col = 0;
-                            self.viewer.first_col = 0;
+                            self.viewer.col_offset = 0;
                         } else {
                             self.viewer.selected_col += 1;
                             if self.viewer.selected_col
-                                > (self.viewer.first_col + self.viewer.ncols - 1)
+                                > (self.viewer.col_offset + self.viewer.visible_cols - 1)
                             {
-                                self.viewer.first_col += 1;
+                                self.viewer.col_offset += 1;
                             }
                         }
                     }
@@ -106,6 +109,9 @@ impl State {
                     Tab::Data => {
                         if self.viewer.selected_row != 0 {
                             self.viewer.selected_row -= 1;
+                            if self.viewer.selected_row < self.viewer.row_offset {
+                                self.viewer.row_offset -= 1;
+                            }
                         }
                     }
                 },
@@ -120,12 +126,13 @@ impl State {
                     Tab::Data => {
                         if self.viewer.selected_col != 0 {
                             self.viewer.selected_col -= 1;
-                            if self.viewer.selected_col < self.viewer.first_col {
-                                self.viewer.first_col -= 1;
+                            if self.viewer.selected_col < self.viewer.col_offset {
+                                self.viewer.col_offset -= 1;
                             }
                         } else {
                             self.viewer.selected_col = self.viewer.num_cols - 1;
-                            self.viewer.first_col = self.viewer.num_cols - self.viewer.ncols;
+                            self.viewer.col_offset =
+                                self.viewer.num_cols - self.viewer.visible_cols;
                         }
                     }
                 },

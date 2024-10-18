@@ -369,20 +369,21 @@ fn render_data(state: &mut State, frame: &mut Frame, rect: Rect) -> Result<()> {
         .schema_ref()
         .fields()
         .iter()
-        .skip(state.viewer.first_col)
+        .skip(state.viewer.col_offset)
         .map(|f| f.name().to_owned())
-        .take(state.viewer.ncols)
+        .take(state.viewer.visible_cols)
         .collect();
     let table_slice = batch_slice(
         &state.viewer.batch,
-        state.viewer.first_row,
-        state.viewer.first_col,
-        state.viewer.nrows,
-        state.viewer.ncols,
+        state.viewer.row_offset,
+        state.viewer.col_offset,
+        state.viewer.visible_rows,
+        state.viewer.visible_cols,
     );
 
     let col_width = 10_usize;
-    let col_constraints = Constraint::from_lengths(vec![col_width as u16; state.viewer.ncols]);
+    let col_constraints =
+        Constraint::from_lengths(vec![col_width as u16; state.viewer.visible_cols]);
     let col_layout = Layout::horizontal(col_constraints).split(rect);
     for (i, (data, name)) in table_slice.iter().zip(col_names).enumerate() {
         let mut lines = vec![Line::from(mask_string(&name, col_width - 1)).fg(ThemeColor::Love)];
@@ -392,14 +393,14 @@ fn render_data(state: &mut State, frame: &mut Frame, rect: Rect) -> Result<()> {
             } else {
                 ThemeColor::Base
             };
-            let fg_color = if ((i + state.viewer.first_col) == state.viewer.selected_col)
-                && ((j + state.viewer.first_row) == state.viewer.selected_row)
+            let fg_color = if ((i + state.viewer.col_offset) == state.viewer.selected_col)
+                && ((j + state.viewer.row_offset) == state.viewer.selected_row)
             {
                 ThemeColor::Iris
             } else {
                 ThemeColor::Text
             };
-            let s = mask_string(c.as_str(), col_width);
+            let s = mask_string(c.as_str(), col_width - 1);
             Line::from(format!("{s} "))
                 .bg(bg_color)
                 .fg(fg_color)
