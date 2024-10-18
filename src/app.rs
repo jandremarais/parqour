@@ -28,6 +28,7 @@ pub struct Viewer {
     reader: ParquetRecordBatchReader,
     pub batch: RecordBatch,
     // pub batch_table:
+    pub batch_size: usize,
     pub selected_row: usize,
     pub selected_col: usize,
     pub first_row: usize,
@@ -118,10 +119,11 @@ impl Viewer {
 
         let file_stem = name.unwrap_or("no name".to_string());
 
+        let batch_size = 64;
         let arrow_metadata =
             ArrowReaderMetadata::try_new(Arc::clone(&parquet_metadata), Default::default())?;
         let builder = ParquetRecordBatchReaderBuilder::new_with_metadata(file, arrow_metadata)
-            .with_batch_size(64);
+            .with_batch_size(batch_size);
         let mut reader = builder.build()?;
 
         // TODO: consider keeping only the necessary data
@@ -182,6 +184,7 @@ impl Viewer {
             file_stem,
             reader,
             batch,
+            batch_size,
             selected_row: 0,
             selected_col: 0,
             first_row: 0,

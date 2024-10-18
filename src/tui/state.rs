@@ -57,7 +57,16 @@ impl State {
                         }
                     }
                     Tab::Data => {
-                        self.viewer.selected_row += 1;
+                        if self.viewer.selected_row == (self.viewer.batch_size - 1) {
+                            //
+                        } else {
+                            self.viewer.selected_row += 1;
+                            if self.viewer.selected_row
+                                > (self.viewer.first_row + self.viewer.nrows - 1)
+                            {
+                                self.viewer.first_row += 1;
+                            }
+                        }
                     }
                 },
                 ScrollType::Horizontal => match self.tab {
